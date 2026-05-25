@@ -1,33 +1,110 @@
-# Lyria Realtime
+# Lyria Realtime BGM System
 
-## CSS UI (Figma) + Local Audio Engine
+自然文入力からBGMを自動設定し、再生中にリアルタイム調整できるローカル実行システムです。  
+フロントエンドは `figma/`（React + Vite）、バックエンドは `local_control_server.py`（FastAPI）です。
 
-Web UI is in `figma/` (React + CSS). Audio playback runs locally in Python for stability.
+## 必要環境
 
-### 1) Python backend (local playback)
+- macOS
+- Python 3.12 系
+- Node.js 20 系
+- npm 10 系
+
+確認:
 
 ```bash
-python3 -m pip install fastapi uvicorn google-genai sounddevice numpy
-export GEMINI_API_KEY="your-api-key"
+python3 --version
+node --version
+npm --version
+```
+
+## セットアップ
+
+### 1) Python依存のインストール
+
+```bash
+cd /Users/kiratosakata/lyria-realtime
+python3 -m pip install "fastapi==0.116.1" "uvicorn==0.35.0" "google-genai==2.4.0" "sounddevice==0.5.2" "numpy==2.3.2"
+```
+
+### 2) フロント依存のインストール
+
+```bash
+cd /Users/kiratosakata/lyria-realtime/figma
+npm ci
+```
+
+## 環境変数
+
+必須:
+
+```bash
+export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+```
+
+任意:
+
+```bash
+# Planner model
+export GEMINI_PLANNER_MODEL="gemini-3.1-flash-lite"
+
+# 出力デバイスID（例: 5 = 複数出力装置）
+export LYRIA_OUTPUT_DEVICE_ID="5"
+```
+
+## 実行手順
+
+### ターミナルA（バックエンド）
+
+```bash
+cd /Users/kiratosakata/lyria-realtime
 uvicorn local_control_server:app --host 127.0.0.1 --port 8001
 ```
 
-### 2) Figma UI frontend
+### ターミナルB（フロントエンド）
 
 ```bash
-cd figma
-npm install
+cd /Users/kiratosakata/lyria-realtime/figma
 npm run dev
 ```
 
-Open: `http://127.0.0.1:5173`
+ブラウザで開く:
 
-- `Generate & Play` starts Lyria stream
-- `Send Live` updates prompt while playing
-- Audio is played by Python process on local speakers
+- `http://127.0.0.1:5173`
 
-## Notes
+## 使い方
 
-- This setup is local-only.
-- `` also exists as pure desktop fallback.
-# lyria-realtime-gui
+1. `Auto Setup Request` に自然文を入力（例: `勉強用のBGMをかけて`）
+2. `Auto Setup` を押す
+3. `Generate & Play` で再生開始
+4. 再生中に `Tempo / Brightness / Density / Key` を調整
+
+## 動作確認API
+
+```bash
+curl http://127.0.0.1:8001/api/status
+curl http://127.0.0.1:8001/api/planner-log
+```
+
+## よくあるエラー
+
+### `GEMINI_API_KEY is not set`
+
+```bash
+export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+```
+
+### 音が出ない
+
+出力デバイスIDを確認:
+
+```bash
+python3 - <<'PY'
+import sounddevice as sd
+for i, d in enumerate(sd.query_devices()):
+    if d["max_output_channels"] > 0:
+        print(i, d["name"])
+PY
+```
+
+表示されたIDを `LYRIA_OUTPUT_DEVICE_ID` に設定してサーバーを再起動してください。
