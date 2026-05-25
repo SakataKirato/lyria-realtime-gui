@@ -29,5 +29,5 @@ Open: `http://127.0.0.1:5173`
 ## Notes
 
 - This setup is local-only.
-- `app_local_gui.py` also exists as pure desktop fallback.
+- `` also exists as pure desktop fallback.
 # lyria-realtime-gui
