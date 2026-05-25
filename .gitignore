@@ -1,0 +1,38 @@
+# Ignore everything by default
+*
+
+# Keep gitignore itself
+!.gitignore
+
+# Keep README
+!README.md
+
+# Keep Python runtime files
+!app_local_gui.py
+!local_control_server.py
+!lyria_realtime_quickstart.py
+!prompt_for_gemini31_flash_lite.txt
+
+# Keep frontend source needed to run
+!figma/
+figma/*
+!figma/src/
+!figma/src/**
+!figma/package.json
+!figma/package-lock.json
+!figma/index.html
+!figma/vite.config.ts
+!figma/postcss.config.mjs
+!figma/default_shadcn_theme.css
+!figma/pnpm-workspace.yaml
+
+# Ignore dependency/build/cache artifacts
+figma/node_modules/
+figma/dist/
+__pycache__/
+*.pyc
+
+# Ignore outputs and report artifacts
+output/
+report_draft.md
+system_overview_diagram*.png

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Play, Pause, RotateCcw, Save, Music } from 'lucide-react';
+import { Play, Pause, RotateCcw, Music } from 'lucide-react';
 import * as Slider from '@radix-ui/react-slider';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
@@ -19,12 +19,7 @@ export default function App() {
   const [status, setStatus] = useState('idle');
   const [chunks, setChunks] = useState(0);
   const [error, setError] = useState('');
-
-  const [presets, setPresets] = useState([
-    { name: 'Ambient Chill', prompt: 'Calm ambient electronic music', tempo: 80, brightness: 30, density: 40, key: 'C' },
-    { name: 'Energetic Pop', prompt: 'Upbeat pop music with drums', tempo: 128, brightness: 70, density: 65, key: 'G' },
-    { name: 'Jazz Fusion', prompt: 'Smooth jazz with piano and saxophone', tempo: 110, brightness: 55, density: 50, key: 'D' },
-  ]);
+  const [autoRequest, setAutoRequest] = useState('勉強用のBGMをかけて');
 
   const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -46,6 +41,26 @@ export default function App() {
     const id = setInterval(() => void pollStatus(), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = setTimeout(() => {
+      void fetch(`${API_BASE}/api/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bpm: tempo[0],
+          brightness: brightness[0] / 100,
+          density: density[0] / 100,
+          key: keySignature[0],
+          temperature: 1.0,
+        }),
+      }).then(async (res) => {
+        if (!res.ok) setError(await res.text());
+      }).catch((e) => setError(String(e)));
+    }, 250);
+    return () => clearTimeout(id);
+  }, [isPlaying, tempo, brightness, density, keySignature]);
 
   const handlePlayPause = async () => {
     if (isPlaying) {
@@ -89,28 +104,28 @@ export default function App() {
     setKeySignature(['C']);
   };
 
-  const loadPreset = (preset: (typeof presets)[0]) => {
-    setPrompt(preset.prompt);
-    setTempo([preset.tempo]);
-    setBrightness([preset.brightness]);
-    setDensity([preset.density]);
-    setKeySignature([preset.key]);
-  };
-
-  const savePreset = () => {
-    const name = window.prompt('Enter preset name:');
-    if (name) {
-      setPresets([...presets, { name, prompt, tempo: tempo[0], brightness: brightness[0], density: density[0], key: keySignature[0] }]);
-    }
-  };
-
-  const sendLivePrompt = async () => {
-    const res = await fetch(`${API_BASE}/api/prompt`, {
+  const runAutoSetup = async () => {
+    setError('');
+    const res = await fetch(`${API_BASE}/api/auto-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, secondary_prompt: secondaryPrompt }),
+      body: JSON.stringify({ user_request: autoRequest, auto_apply: true }),
     });
-    if (!res.ok) setError(await res.text());
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+    const data = await res.json();
+    const plan = data?.plan;
+    if (!plan) return;
+    const wp = plan.weighted_prompts || [];
+    if (wp[0]?.text) setPrompt(wp[0].text);
+    setSecondaryPrompt([wp[1]?.text, wp[2]?.text].filter(Boolean).join(', '));
+    if (typeof plan.bpm === 'number') setTempo([plan.bpm]);
+    if (typeof plan.brightness === 'number') setBrightness([Math.round(plan.brightness * 100)]);
+    if (typeof plan.density === 'number') setDensity([Math.round(plan.density * 100)]);
+    if (typeof plan.key === 'string') setKeySignature([plan.key]);
+    if (data.applied) setStatus('streaming (auto-applied)');
   };
 
   return (
@@ -129,12 +144,11 @@ export default function App() {
             <Card>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Primary Prompt</label>
-                  <Input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the music style, genre, instruments..." className="w-full" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Secondary Prompt (Blend)</label>
-                  <Input value={secondaryPrompt} onChange={(e) => setSecondaryPrompt(e.target.value)} placeholder="Add another style to blend..." className="w-full" />
+                  <label className="block text-sm font-medium mb-2">Auto Setup Request</label>
+                  <div className="flex gap-2">
+                    <Input value={autoRequest} onChange={(e) => setAutoRequest(e.target.value)} placeholder="例: 勉強用のBGMをかけて" className="w-full" />
+                    <Button onClick={runAutoSetup} variant="outline" className="px-4 py-2 whitespace-nowrap">Auto Setup</Button>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -181,9 +195,7 @@ export default function App() {
                 <Button onClick={handlePlayPause} className="px-8 py-4 text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
                   {isPlaying ? <><Pause className="w-6 h-6 mr-2" />Pause</> : <><Play className="w-6 h-6 mr-2" />Generate & Play</>}
                 </Button>
-                <Button onClick={sendLivePrompt} variant="outline" className="px-4 py-4">Send Live</Button>
                 <Button onClick={handleReset} variant="outline" className="px-4 py-4"><RotateCcw className="w-5 h-5" /></Button>
-                <Button onClick={savePreset} variant="outline" className="px-4 py-4"><Save className="w-5 h-5" /></Button>
               </div>
             </Card>
           </div>
@@ -192,18 +204,6 @@ export default function App() {
             <Card>
               <h3 className="text-lg font-semibold mb-4">Waveform</h3>
               <WaveformVisualizer isPlaying={isPlaying} />
-            </Card>
-
-            <Card>
-              <h3 className="text-lg font-semibold mb-4">Presets</h3>
-              <div className="space-y-2">
-                {presets.map((preset, index) => (
-                  <button key={index} onClick={() => loadPreset(preset)} className="w-full p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left">
-                    <div className="font-medium">{preset.name}</div>
-                    <div className="text-xs text-purple-300 mt-1 truncate">{preset.prompt}</div>
-                  </button>
-                ))}
-              </div>
             </Card>
 
             <Card>
