@@ -3,12 +3,17 @@
 自然文入力からBGMを自動設定し、再生中にリアルタイム調整できるローカル実行システムです。  
 フロントエンドは `figma/`（React + Vite）、バックエンドは `local_control_server.py`（FastAPI）です。
 
-## 必要環境
+## 実行環境（本制作）
 
-- macOS
-- Python 3.12 系
-- Node.js 20 系
-- npm 10 系
+- OS: macOS 15.6.1 (Build 24G90)
+- Python: 3.12.10
+- Node.js: v22.17.0
+- npm: 11.4.2
+- fastapi: 0.136.1
+- uvicorn: 0.47.0
+- google-genai: 2.4.0
+- sounddevice: 0.5.5
+- numpy: 2.0.2
 
 確認:
 
@@ -20,18 +25,25 @@ npm --version
 
 ## セットアップ
 
+リポジトリをクローンして、ルートディレクトリに移動:
+
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd <YOUR_REPOSITORY_DIR>
+```
+
 ### 1) Python依存のインストール
 
 ```bash
-cd /Users/kiratosakata/lyria-realtime
-python3 -m pip install "fastapi==0.116.1" "uvicorn==0.35.0" "google-genai==2.4.0" "sounddevice==0.5.2" "numpy==2.3.2"
+python3 -m pip install "fastapi==0.136.1" "uvicorn==0.47.0" "google-genai==2.4.0" "sounddevice==0.5.5" "numpy==2.0.2"
 ```
 
 ### 2) フロント依存のインストール
 
 ```bash
-cd /Users/kiratosakata/lyria-realtime/figma
+cd figma
 npm ci
+cd ..
 ```
 
 ## 環境変数
@@ -57,14 +69,13 @@ export LYRIA_OUTPUT_DEVICE_ID="5"
 ### ターミナルA（バックエンド）
 
 ```bash
-cd /Users/kiratosakata/lyria-realtime
 uvicorn local_control_server:app --host 127.0.0.1 --port 8001
 ```
 
 ### ターミナルB（フロントエンド）
 
 ```bash
-cd /Users/kiratosakata/lyria-realtime/figma
+cd figma
 npm run dev
 ```
 
