@@ -8,7 +8,7 @@
 !README.md
 
 # Keep Python runtime files
-!app_local_gui.py
+# !app_local_gui.py
 !local_control_server.py
 !lyria_realtime_quickstart.py
 !prompt_for_gemini31_flash_lite.txt
